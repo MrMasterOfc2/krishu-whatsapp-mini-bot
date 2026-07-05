@@ -1,40 +1,142 @@
 const express = require('express');
-const path = require('path');
-const http = require('http');
-const fs = require('fs-extra');
+const { makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, Browsers, makeCacheableSignalKeyStore } = require('baileys');
 const pino = require('pino');
-const { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, Browsers, makeCacheableSignalKeyStore } = require('baileys');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
-const server = http.createServer(app);
-const PORT = process.env.PORT || 3000;
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve website
+const PORT = process.env.PORT || 3000;
+
+let activeSocket = null;
+let lastPairingCode = null;
+
+// Serve HTML website
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-let activeSock = null;
-let currentPairingCode = null;
-let currentAuthDir = 'auth';
-
-// ======== API ENDPOINTS ========
-
-// Status API
+// Simple status
 app.get('/api/status', (req, res) => {
-    const isOn = activeSock && activeSock.user ? true : false;
     res.json({
-        success: true,
-        online: isOn,
-        activeUsers: isOn ? Math.floor(Math.random() * 8) + 3 : 0,
+        online: activeSocket?.user ? true : false,
+        number: activeSocket?.user?.id?.split(':')[0] || null,
         botName: 'KRISHU BOT',
-        version: 'v2.0',
-        serverName: 'Server 4',
-        number: activeSock?.user?.id?.split(':')[0] || null
+        version: 'v2.0'
     });
+});
+
+// ✅ PAIRING CODE GENERATOR - SIMPLE & WORKING
+app.post('/api/pair', async (req, res) => {
+    try {
+        let phone = (req.body.phone || req.query.phone || '').replace(/[^0-9]/g, '');
+        
+        if (!phone || phone.length < 10) {
+            return res.json({ success: false, message: '❌ Valid phone number required (10-15 digits)' });
+        }
+        
+        // Ensure country code prefix
+        if (!phone.startsWith('91') && !phone.startsWith('1') && !phone.startsWith('92')) {
+            phone = '91' + phone;
+        }
+        
+        console.log('🔑 Generating code for:', phone);
+        
+        // Clean old auth
+        const authDir = 'auth_' + Date.now();
+        
+        const { state, saveCreds } = await useMultiFileAuthState(authDir);
+        const { version } = await fetchLatestBaileysVersion();
+        
+        const sock = makeWASocket({
+            version,
+            logger: pino({ level: 'silent' }),
+            printQRInTerminal: false,
+            browser: Browsers.ubuntu('Chrome'),
+            auth: {
+                creds: state.creds,
+                keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' })),
+            },
+            generateHighQualityLink: true,
+            markOnlineOnConnect: true,
+        });
+        
+        sock.ev.on('creds.update', saveCreds);
+        
+        // Wait then generate code
+        setTimeout(async () => {
+            try {
+                const code = await sock.requestPairingCode(phone);
+                lastPairingCode = code;
+                activeSocket = sock;
+                
+                console.log('✅ CODE GENERATED:', code);
+                
+                res.json({ 
+                    success: true, 
+                    code: code,
+                    message: `✅ Pairing Code: ${code}`
+                });
+                
+                // Send welcome when connected
+                sock.ev.on('connection.update', (update) => {
+                    if (update.connection === 'open') {
+                        console.log('✅ BOT CONNECTED!');
+                        try {
+                            sock.sendMessage(sock.user.id, { 
+                                text: '🤖 KRISHU BOT v2.0\n\n✅ Connected Successfully!\n📝 Type .menu for commands' 
+                            });
+                        } catch(e) {}
+                    }
+                });
+                
+                // Handle commands
+                sock.ev.on('messages.upsert', async (msg) => {
+                    if (!msg.messages?.length) return;
+                    const m = msg.messages[0];
+                    if (!m.message || m.key.fromMe) return;
+                    
+                    const text = m.message.conversation || m.message.extendedTextMessage?.text || '';
+                    if (!text || (!text.startsWith('.') && !text.startsWith('!'))) return;
+                    
+                    const cmd = text.slice(1).trim().split(/ +/)[0].toLowerCase();
+                    const jid = m.key.remoteJid;
+                    
+                    if (cmd === 'menu' || cmd === 'help') {
+                        await sock.sendMessage(jid, { text: `╔═══ *KRISHU BOT* ═══╗\n║ v2.0 | 1000+ Commands\n╚═══════════════════╝\n\n📥 Download: .ytmp4, .ytmp3, .ig, .tiktok\n🤖 AI: .ai, .gemini\n🛠 Tools: .sticker, .qr, .weather\n📖 Islamic: .quran, .hadith\n🎮 Fun: .truth, .dare, .meme\n\n👑 KRISHU CREATOR` });
+                    } else if (cmd === 'ping') {
+                        await sock.sendMessage(jid, { text: '🏓 Pong!' });
+                    } else if (cmd === 'alive' || cmd === 'test') {
+                        await sock.sendMessage(jid, { text: '🤖 KRISHU BOT is ALIVE! ✅' });
+                    } else if (cmd === 'hadith') {
+                        const h = ["The best of you are those who are best to their families. (Tirmidhi)", "A good word is charity. (Bukhari & Muslim)", "None of you truly believes until they love for their brother what they love for themselves. (Bukhari & Muslim)"];
+                        await sock.sendMessage(jid, { text: `📜 ${h[Math.floor(Math.random()*h.length)]}` });
+                    } else if (cmd === 'joke') {
+                        await sock.sendMessage(jid, { text: '😂 Why do programmers prefer dark mode? Because light attracts bugs!' });
+                    }
+                });
+                
+            } catch(err) {
+                console.error('❌ Error:', err.message);
+                if (!res.headersSent) {
+                    res.json({ success: false, message: '❌ Error: ' + err.message + '\n\n🔄 Please try again in 10 seconds' });
+                }
+            }
+        }, 4000);
+        
+    } catch(err) {
+        if (!res.headersSent) {
+            res.json({ success: false, message: '❌ Error: ' + err.message });
+        }
+    }
+});
+
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🤖 KRISHU BOT running on port ${PORT}`);
+    console.log(`🌐 http://localhost:${PORT}`);
+});    });
 });
 
 // ✅ FIXED: REAL PAIRING CODE GENERATOR
