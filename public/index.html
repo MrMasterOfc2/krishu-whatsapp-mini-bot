@@ -18,23 +18,301 @@
         .status-value { font-weight: 700; }
         .online { color: #00ff88; }
         .offline { color: #ff4444; }
+        
         .pairing-section { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 30px; backdrop-filter: blur(10px); margin-bottom: 30px; }
-        .pairing-section h2 { text-align: center; margin-bottom: 10px; }
-        .instruction { text-align: center; color: #888; margin-bottom: 20px; }
+        .pairing-section h2 { text-align: center; margin-bottom: 15px; }
         .input-group { display: flex; gap: 10px; margin-bottom: 15px; }
-        select, input { padding: 14px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; color: white; font-size: 1rem; }
-        select { width: 180px; }
-        input { flex: 1; }
-        button { width: 100%; padding: 16px; background: linear-gradient(135deg, #00ff88, #00b4ff); border: none; border-radius: 10px; color: #0a0a1a; font-weight: 800; font-size: 1.1rem; cursor: pointer; transition: transform 0.2s; }
-        button:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,255,136,0.3); }
+        select, input { padding: 14px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; color: white; font-size: 1rem; width: 100%; }
+        select { max-width: 180px; }
+        
+        .btn-group { display: flex; gap: 10px; margin-bottom: 15px; }
+        .btn { flex: 1; padding: 16px; border: none; border-radius: 10px; font-weight: 800; font-size: 1rem; cursor: pointer; transition: all 0.3s; }
+        .btn-primary { background: linear-gradient(135deg, #00ff88, #00b4ff); color: #0a0a1a; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,255,136,0.3); }
+        .btn-secondary { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); }
+        .btn-danger { background: linear-gradient(135deg, #ff4444, #ff8800); color: white; }
+        
         .hidden { display: none !important; }
         #result { margin-top: 15px; padding: 20px; border-radius: 10px; background: rgba(0,255,136,0.08); border: 1px solid rgba(0,255,136,0.2); text-align: center; }
-        .code { font-size: 2.5rem; font-weight: 900; color: #00ff88; letter-spacing: 8px; margin: 15px 0; }
+        #pairingCodeDisplay { font-size: 2.5rem; font-weight: 900; color: #00ff88; letter-spacing: 8px; margin: 15px 0; word-break: break-all; }
         .spinner { width: 40px; height: 40px; border: 3px solid rgba(0,255,136,0.2); border-top: 3px solid #00ff88; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 15px auto; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        
         .instructions { margin-top: 30px; padding: 20px; background: rgba(0,180,255,0.05); border-radius: 12px; }
-        .instructions h3 { margin-bottom: 15px; }
-        .instructions ol { padding-left: 20px; }
+        .instructions li { margin: 10px 0; color: #bbb; }
+        
+        .features { margin-bottom: 30px; }
+        .features h2 { text-align: center; margin-bottom: 20px; }
+        .feature-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+        .feature-item { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 15px 10px; text-align: center; font-size: 0.85rem; }
+        
+        .faq { margin-bottom: 30px; }
+        .faq-item { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 15px 20px; margin-bottom: 10px; }
+        .faq-item strong { color: #00ff88; }
+        .faq-item p { margin: 5px 0; color: #bbb; }
+        
+        .code-input-group { display: flex; gap: 10px; margin: 15px 0; }
+        .code-input-group input { font-size: 1.5rem; text-align: center; letter-spacing: 4px; text-transform: uppercase; }
+        
+        footer { text-align: center; padding: 20px; color: #666; }
+        footer a { color: #00ff88; text-decoration: none; }
+        
+        @media (max-width: 600px) { 
+            .bot-title { font-size: 2.2rem; } 
+            .input-group { flex-direction: column; } 
+            select { max-width: 100%; } 
+            .btn-group { flex-direction: column; }
+            .feature-grid { grid-template-columns: repeat(2, 1fr); }
+            #pairingCodeDisplay { font-size: 1.8rem; letter-spacing: 4px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1 class="bot-title">KRISHU BOT</h1>
+        <p class="bot-version">BEST MINI BOT // v2.0</p>
+    </header>
+    
+    <div class="status-card">
+        <div class="status-row"><span class="status-label">⚡ Server</span><span class="status-value" id="serverName">Loading...</span></div>
+        <div class="status-row"><span class="status-label">🔄 SYSTEM</span><span class="status-value" id="systemStatus">--</span></div>
+        <div class="status-row"><span class="status-label">👥 ACTIVE USERS</span><span class="status-value" id="activeUsers">--</span></div>
+        <div class="status-row"><span class="status-label">🔒 SECURITY</span><span class="status-value">ENCRYPTED ✅</span></div>
+    </div>
+    
+    <div class="pairing-section">
+        <h2>🔗 Connect WhatsApp</h2>
+        <p style="text-align:center;color:#888;margin-bottom:20px;">Enter your number to generate pairing code</p>
+        
+        <div class="input-group">
+            <select id="countryCode">
+                <option value="91">🇮🇳 +91 (India)</option>
+                <option value="92">🇵🇰 +92 (Pakistan)</option>
+                <option value="1">🇺🇸 +1 (USA)</option>
+                <option value="44">🇬🇧 +44 (UK)</option>
+                <option value="880">🇧🇩 +880 (Bangladesh)</option>
+                <option value="971">🇦🇪 +971 (UAE)</option>
+                <option value="966">🇸🇦 +966 (Saudi Arabia)</option>
+                <option value="60">🇲🇾 +60 (Malaysia)</option>
+                <option value="65">🇸🇬 +65 (Singapore)</option>
+                <option value="62">🇮🇩 +62 (Indonesia)</option>
+                <option value="63">🇵🇭 +63 (Philippines)</option>
+                <option value="90">🇹🇷 +90 (Turkey)</option>
+                <option value="20">🇪🇬 +20 (Egypt)</option>
+                <option value="212">🇲🇦 +212 (Morocco)</option>
+                <option value="966">🇸🇦 +966 (Saudi Arabia)</option>
+                <option value="971">🇦🇪 +971 (UAE)</option>
+            </select>
+            <input type="text" id="phoneNumber" placeholder="Enter number (e.g. 9876543210)" maxlength="15">
+        </div>
+        
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="generatePairingCode()">🔑 Generate Code</button>
+        </div>
+        
+        <div id="loading" class="hidden">
+            <div class="spinner"></div>
+            <p style="color:#00ff88;">⏳ Generating pairing code... Please wait 5-10 seconds...</p>
+        </div>
+        
+        <div id="result" class="hidden"></div>
+        
+        <!-- Manual Code Entry -->
+        <div id="manualEntry" class="hidden">
+            <p style="text-align:center;color:#00ff88;margin-top:15px;">✅ Open WhatsApp and enter this code:</p>
+            <div id="pairingCodeDisplay">------</div>
+            <p style="text-align:center;color:#bbb;font-size:0.9rem;">
+                🧭 WhatsApp → Settings → Linked Devices → Link a Device<br>
+                Enter the code above (without hyphens)
+            </p>
+            <div style="text-align:center;margin-top:15px;">
+                <button class="btn btn-secondary" onclick="copyCode()">📋 Copy Code</button>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h3>📖 How to Connect:</h3>
+            <ol>
+                <li>Enter your phone number with country code</li>
+                <li>Click <strong>"Generate Code"</strong> button</li>
+                <li>Wait 5-10 seconds for the pairing code</li>
+                <li>Open <strong>WhatsApp</strong> on your phone</li>
+                <li>Go to <strong>Settings → Linked Devices → Link a Device</strong></li>
+                <li>Enter the <strong>8-digit code</strong> shown here</li>
+                <li>✅ <strong>Bot will connect automatically!</strong></li>
+            </ol>
+        </div>
+    </div>
+    
+    <div class="features">
+        <h2>🚀 1000+ Commands</h2>
+        <div class="feature-grid">
+            <div class="feature-item">📥 YouTube Downloader</div>
+            <div class="feature-item">📷 Instagram Download</div>
+            <div class="feature-item">🎵 TikTok Downloader</div>
+            <div class="feature-item">📘 Facebook Download</div>
+            <div class="feature-item">🤖 AI Chat (Gemini)</div>
+            <div class="feature-item">🎨 Sticker Maker</div>
+            <div class="feature-item">📖 Quran & Hadith</div>
+            <div class="feature-item">🕌 Prayer Times</div>
+            <div class="feature-item">🌤 Weather Info</div>
+            <div class="feature-item">🎮 Fun Games</div>
+            <div class="feature-item">👥 Group Tools</div>
+            <div class="feature-item">🔍 Search Tools</div>
+            <div class="feature-item">🌐 Translator</div>
+            <div class="feature-item">📰 News Updates</div>
+            <div class="feature-item">💬 Auto Reply</div>
+            <div class="feature-item">🔐 Anti Ban</div>
+        </div>
+    </div>
+    
+    <div class="faq">
+        <h2>❓ FAQ</h2>
+        <div class="faq-item">
+            <p><strong>✅ Q: Fake number pe chalega?</strong></p>
+            <p>A: Haan! Fake + Real dono number pe chalega. Bas WhatsApp linked device karo.</p>
+        </div>
+        <div class="faq-item">
+            <p><strong>✅ Q: OTP nahi aata?</strong></p>
+            <p>A: Nahi! Direct pairing code se link hota hai. Koi OTP nahi chahiye.</p>
+        </div>
+        <div class="faq-item">
+            <p><strong>✅ Q: 24/7 free chalega?</strong></p>
+            <p>A: Haan! Render.com free plan pe 24/7 chalega. Bas 14 min mein ping karo.</p>
+        </div>
+        <div class="faq-item">
+            <p><strong>✅ Q: Anti-ban hai?</strong></p>
+            <p>A: Haan! Safe pairing code method use hota hai. Ban ka koi risk nahi.</p>
+        </div>
+        <div class="faq-item">
+            <p><strong>✅ Q: Mobile se deploy ho sakta hai?</strong></p>
+            <p>A: Haan! Sirf mobile browser se pura process complete ho sakta hai.</p>
+        </div>
+    </div>
+    
+    <footer>
+        <p>👑 <strong>KRISHU CREATOR</strong> // POWERFULL MINI BOT v2.0</p>
+        <p style="font-size:0.8rem;color:#555;margin-top:8px;">🔥 1000+ Commands | All Countries | Free 24/7 | Anti-Ban ✅</p>
+    </footer>
+</div>
+
+<script>
+const API_BASE = '';
+
+async function generatePairingCode() {
+    const phoneInput = document.getElementById('phoneNumber');
+    const countryCode = document.getElementById('countryCode').value;
+    const phone = phoneInput.value.replace(/[^0-9]/g, '');
+    
+    if (!phone || phone.length < 7) {
+        showError('❌ Please enter a valid phone number (at least 7 digits)');
+        return;
+    }
+    
+    const fullNumber = countryCode + phone;
+    
+    // Show loading
+    document.getElementById('loading').classList.remove('hidden');
+    document.getElementById('result').classList.add('hidden');
+    document.getElementById('manualEntry').classList.add('hidden');
+    document.getElementById('pairingCodeDisplay').textContent = '------';
+    
+    try {
+        const res = await fetch(`${API_BASE}/api/pair`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: fullNumber })
+        });
+        
+        const data = await res.json();
+        document.getElementById('loading').classList.add('hidden');
+        
+        if (data.success && data.code) {
+            if (data.code === 'ALREADY_CONNECTED') {
+                showSuccess('✅ Bot is already connected! Send .menu in WhatsApp to test.');
+                return;
+            }
+            
+            // Show the pairing code
+            const displayCode = data.formattedCode || data.code.match(/.{1,4}/g)?.join('-') || data.code;
+            document.getElementById('pairingCodeDisplay').textContent = displayCode;
+            document.getElementById('manualEntry').classList.remove('hidden');
+            
+            showSuccess(`✅ Pairing code generated successfully!`);
+        } else {
+            showError(data.message || '❌ Failed to generate code. Please wait 10 seconds and try again.');
+        }
+    } catch (error) {
+        document.getElementById('loading').classList.add('hidden');
+        showError('❌ Connection error. Make sure the server is running. Error: ' + error.message);
+    }
+}
+
+function showSuccess(msg) {
+    const result = document.getElementById('result');
+    result.innerHTML = `<p style="color:#00ff88;font-weight:700;">${msg}</p>`;
+    result.className = '';
+    result.classList.remove('hidden');
+}
+
+function showError(msg) {
+    const result = document.getElementById('result');
+    result.innerHTML = `<p style="color:#ff4444;font-weight:700;">${msg}</p>`;
+    result.className = '';
+    result.classList.remove('hidden');
+}
+
+function copyCode() {
+    const code = document.getElementById('pairingCodeDisplay').textContent.replace(/-/g, '');
+    navigator.clipboard.writeText(code).then(() => {
+        alert('✅ Code copied! Paste it in WhatsApp Linked Devices');
+    }).catch(() => {
+        // Fallback
+        const textArea = document.createElement('textarea');
+        textArea.value = code;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        alert('✅ Code copied! Paste it in WhatsApp Linked Devices');
+    });
+}
+
+// Auto-refresh status
+async function refreshStatus() {
+    try {
+        const res = await fetch(`${API_BASE}/api/status`);
+        const data = await res.json();
+        
+        document.getElementById('serverName').textContent = data.serverName || 'Server 4';
+        
+        const statusEl = document.getElementById('systemStatus');
+        if (data.online) {
+            statusEl.textContent = 'ONLINE ✅';
+            statusEl.className = 'status-value online';
+        } else {
+            statusEl.textContent = 'WAITING FOR CONNECTION';
+            statusEl.className = 'status-value offline';
+        }
+        
+        document.getElementById('activeUsers').textContent = data.online ? (data.activeUsers + ' ONLINE') : '🟢 Not Connected';
+    } catch (e) {
+        document.getElementById('systemStatus').textContent = 'SERVER STARTING...';
+        document.getElementById('systemStatus').className = 'status-value offline';
+    }
+}
+
+refreshStatus();
+setInterval(refreshStatus, 10000);
+
+// Enter key to submit
+document.getElementById('phoneNumber').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') generatePairingCode();
+});
+</script>
+</body>
+</html>        .instructions ol { padding-left: 20px; }
         .instructions li { margin: 10px 0; color: #bbb; }
         .features { margin-bottom: 30px; }
         .features h2 { text-align: center; margin-bottom: 20px; }
